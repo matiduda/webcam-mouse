@@ -80,7 +80,6 @@ while True:
         landmarks = []
         for handslms in result.multi_hand_landmarks:
             for lm in handslms.landmark:
-                # print(id, lm)
                 lmx = int(lm.x * x)
                 lmy = int(lm.y * y)
 
@@ -91,7 +90,7 @@ while True:
 
             # Predict gesture
             prediction = model.predict([landmarks])
-            # print(prediction)
+
             classID = np.argmax(prediction)
             className = classNames[classID]
 
