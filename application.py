@@ -2,38 +2,24 @@ import cv2
 import datetime
 import numpy as np
 import mediapipe as mp
-import tensorflow as tf
-from tensorflow.keras.models import load_model
 
-# global variables
-stop_thread = False             # controls thread execution
-img = None                      # stores the image retrieved by the camera
-
-
-def start_capture_thread(cap):
-    global img, stop_thread
-
-    # continuously read fames from the camera
-    while True:
-        _, img = cap.read()
-
-        if (stop_thread):
-            break
-
+CLICK_DISTANCE = 20
+CLICK_COOLDOWN_IN_FRAMES = 10
 
 # initialize mediapipe
-mpHands = mp.solutions.hands
-hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
-mpDraw = mp.solutions.drawing_utils
-
-# Load the gesture recognizer model
-model = load_model('mp_hand_gesture')
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(
+    max_num_hands=1,
+    model_complexity=0,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5)
 
 # Load class names
 f = open('gesture.names', 'r')
 classNames = f.read().split('\n')
 f.close()
-print(classNames)
 
 # create display window
 cv2.namedWindow("Gesture control", cv2.WINDOW_NORMAL)
@@ -51,6 +37,8 @@ print('* Capture width:', cap_width)
 print('* Capture height:', cap_height)
 print('* Capture FPS:', cap_fps, 'ideal wait time between frames:', fps_sleep, 'ms')
 
+cooldown = 0
+frame_count = 0
 
 while True:
     # initialize time and frame count variables
@@ -69,34 +57,65 @@ while True:
     framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # Get hand landmark prediction
-    result = hands.process(framergb)
-
-    # print(result)
+    results = hands.process(framergb)
 
     className = ''
 
     # post process the result
-    if result.multi_hand_landmarks:
-        landmarks = []
-        for handslms in result.multi_hand_landmarks:
-            for lm in handslms.landmark:
-                lmx = int(lm.x * x)
-                lmy = int(lm.y * y)
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(
+                frame,
+                hand_landmarks,
+                mp_hands.HAND_CONNECTIONS,
+                mp_drawing_styles.get_default_hand_landmarks_style(),
+                mp_drawing_styles.get_default_hand_connections_style())
 
-                landmarks.append([lmx, lmy])
+        # show the prediction on the frame
+        cv2.putText(frame, className, (10, 100), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, (255, 50, 50), 2, cv2.LINE_AA)
 
-            # Drawing landmarks on frames
-            mpDraw.draw_landmarks(frame, handslms, mpHands.HAND_CONNECTIONS)
+        # Mouse click vector
 
-            # Predict gesture
-            prediction = model.predict([landmarks])
+        index_x = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x * cap_width
+        index_y = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y * cap_height
+        thumb_x = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].x * cap_width
+        thumb_y = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y * cap_height
 
-            classID = np.argmax(prediction)
-            className = classNames[classID]
+        line_color = (0, 255, 0)
 
-    # show the prediction on the frame
-    cv2.putText(frame, className, (10, 100), cv2.FONT_HERSHEY_SIMPLEX,
-                1, (255, 50, 50), 2, cv2.LINE_AA)
+        if cooldown > 0:
+            line_color = (255, 0, 0)
+            cooldown -= 1
+
+        line_thickness = 2
+        cv2.line(frame, (int(thumb_x), int(thumb_y)), (int(index_x), int(index_y)),
+                 line_color, thickness=line_thickness)
+
+        click_distance = np.sqrt(
+            ((thumb_x - index_x) ** 2 + (thumb_y - index_y) ** 2))
+
+        if click_distance <= CLICK_DISTANCE and cooldown == 0:
+            print(f'Mouse click! ')
+            cooldown = CLICK_COOLDOWN_IN_FRAMES
+
+        # Mouse position vector
+
+        center_x = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * cap_width
+        center_y = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * cap_height
+
+        center_distance = np.sqrt(
+            ((int(cap_width // 2) - center_x) ** 2 + (int(cap_height // 2) - center_y) ** 2))
+
+        # Of course we can do x_diff and y_diff seperately
+        mouse_speed = np.log(center_distance)
+
+        cv2.line(frame, (int(cap_width // 2), int(cap_height // 2)), (int(center_x), int(center_y)),
+                 (255, 255, 255), thickness=1)
+
+        # Printing stats
+        if frame_count % 30 == 0:
+            print(f'Mouse speed: {mouse_speed}')
 
     # --- FPS ---
     frames += 1
@@ -130,6 +149,8 @@ while True:
     key = cv2.waitKey(1)
     if (key == 27):
         break
+
+    frame_count += 1
 
 # release the webcam and destroy all active windows
 cap.release()
