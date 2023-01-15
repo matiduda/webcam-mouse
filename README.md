@@ -5,13 +5,13 @@
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the following dependencies.
 
 ```bash
-pip install opencv-python mediapipe tensorflow
+pip install opencv-python mediapipe tensorflow PyAutoGUI
 ```
 
 ## Usage
 
 ```bash
-python application.py
+python src/application.py
 ```
 
 ## Contributing

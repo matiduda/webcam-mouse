@@ -3,6 +3,9 @@ import datetime
 import numpy as np
 import mediapipe as mp
 
+from MouseController import MouseController
+
+ENVIRONMENT_DEBUG = True
 CLICK_DISTANCE = 20
 CLICK_COOLDOWN_IN_FRAMES = 10
 
@@ -17,7 +20,7 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.5)
 
 # Load class names
-f = open('gesture.names', 'r')
+f = open('./resources/gesture.names', 'r')
 classNames = f.read().split('\n')
 f.close()
 
@@ -40,6 +43,9 @@ print('* Capture FPS:', cap_fps, 'ideal wait time between frames:', fps_sleep, '
 cooldown = 0
 frame_count = 0
 
+mouse_controller = MouseController(0, ENVIRONMENT_DEBUG)
+old_x = 0
+olx_y = 0
 while True:
     # initialize time and frame count variables
     last_time = datetime.datetime.now()
@@ -96,26 +102,28 @@ while True:
             ((thumb_x - index_x) ** 2 + (thumb_y - index_y) ** 2))
 
         if click_distance <= CLICK_DISTANCE and cooldown == 0:
-            print(f'Mouse click! ')
+            mouse_controller.left_click()
             cooldown = CLICK_COOLDOWN_IN_FRAMES
 
         # Mouse position vector
-
         center_x = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * cap_width
         center_y = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * cap_height
 
-        center_distance = np.sqrt(
-            ((int(cap_width // 2) - center_x) ** 2 + (int(cap_height // 2) - center_y) ** 2))
+        distance_x = (int(cap_width // 2) - center_x)
+        distance_y = int(cap_height // 2) - center_y
 
+        mouse_controller.move(-distance_x, -distance_y)
         # Of course we can do x_diff and y_diff seperately
-        mouse_speed = np.log(center_distance)
+        #mouse_speed = np.log(center_distance)
 
+        #white tracing line
         cv2.line(frame, (int(cap_width // 2), int(cap_height // 2)), (int(center_x), int(center_y)),
                  (255, 255, 255), thickness=1)
 
         # Printing stats
         if frame_count % 30 == 0:
-            print(f'Mouse speed: {mouse_speed}')
+            frame_count = 0
+            # print(f'Mouse speed: {mouse_speed}')
 
     # --- FPS ---
     frames += 1
