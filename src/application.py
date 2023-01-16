@@ -125,8 +125,9 @@ with ThreadPoolExecutor() as executor:
             center_y = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * cap_height
             distance_x = (int(cap_width // 2) - center_x)
             distance_y = int(cap_height // 2) - center_y
-            if abs(distance_x) > 40 or abs(distance_y) > 40:
-                executor.submit(mouse_controller.move, -distance_x // 6, -distance_y // 6,
+            distance = np.sqrt(sum(map(lambda x, y: (x - y) ** 2, (distance_x, center_x), (distance_y, center_y))))
+            if distance > 50:
+                executor.submit(mouse_controller.move, -distance_x // 8, -distance_y // 8,
                                 (datetime.datetime.now() - start_time).total_seconds())
 
             # mouse_speed = np.log(center_distance)
