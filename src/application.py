@@ -43,48 +43,6 @@ frame_count = 0
 mouse_controller = MouseController(0, ENVIRONMENT_DEBUG)
 
 
-def handle_hand_landmarks():
-    global cooldown, frame_count
-    for hand_landmarks in results.multi_hand_landmarks:
-        mp_drawing.draw_landmarks(
-            frame,
-            hand_landmarks,
-            mp_hands.HAND_CONNECTIONS,
-            mp_drawing_styles.get_default_hand_landmarks_style(),
-            mp_drawing_styles.get_default_hand_connections_style())
-    # Mouse click vector
-    index_x = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x * cap_width
-    index_y = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y * cap_height
-    thumb_x = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].x * cap_width
-    thumb_y = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y * cap_height
-    line_color = (0, 255, 0)
-    if cooldown > 0:
-        line_color = (255, 0, 0)
-        cooldown -= 1
-    line_thickness = 2
-    cv2.line(frame, (int(thumb_x), int(thumb_y)), (int(index_x), int(index_y)),
-             line_color, thickness=line_thickness)
-    click_distance = np.sqrt(
-        ((thumb_x - index_x) ** 2 + (thumb_y - index_y) ** 2))
-    if click_distance <= CLICK_DISTANCE and cooldown == 0:
-        executor.submit(mouse_controller.left_click())
-        cooldown = CLICK_COOLDOWN_IN_FRAMES
-    # Mouse position vector
-    center_x = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * cap_width
-    center_y = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * cap_height
-    distance_x = (int(cap_width // 2) - center_x)
-    distance_y = int(cap_height // 2) - center_y
-    executor.submit(mouse_controller.move, -distance_x, -distance_y,
-                    (datetime.datetime.now() - start_time).total_seconds())
-    # mouse_speed = np.log(center_distance)
-    # white tracing line
-    cv2.line(frame, (int(cap_width // 2), int(cap_height // 2)), (int(center_x), int(center_y)),
-             (255, 255, 255), thickness=1)
-    # Printing stats
-    if frame_count % 30 == 0:
-        frame_count = 0
-        # print(f'Mouse speed: {mouse_speed}')
-
 
 def update_fps(frames):
     global x, y
@@ -133,7 +91,45 @@ with ThreadPoolExecutor() as executor:
 
         # post process the result
         if results.multi_hand_landmarks:
-            handle_hand_landmarks()
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(
+                    frame,
+                    hand_landmarks,
+                    mp_hands.HAND_CONNECTIONS,
+                    mp_drawing_styles.get_default_hand_landmarks_style(),
+                    mp_drawing_styles.get_default_hand_connections_style())
+            # Mouse click vector
+            index_x = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x * cap_width
+            index_y = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y * cap_height
+            thumb_x = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].x * cap_width
+            thumb_y = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y * cap_height
+            line_color = (0, 255, 0)
+            if cooldown > 0:
+                line_color = (255, 0, 0)
+                cooldown -= 1
+            line_thickness = 2
+            cv2.line(frame, (int(thumb_x), int(thumb_y)), (int(index_x), int(index_y)),
+                     line_color, thickness=line_thickness)
+            click_distance = np.sqrt(
+                ((thumb_x - index_x) ** 2 + (thumb_y - index_y) ** 2))
+            if click_distance <= CLICK_DISTANCE and cooldown == 0:
+                executor.submit(mouse_controller.left_click())
+                cooldown = CLICK_COOLDOWN_IN_FRAMES
+            # Mouse position vector
+            center_x = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * cap_width
+            center_y = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * cap_height
+            distance_x = (int(cap_width // 2) - center_x)
+            distance_y = int(cap_height // 2) - center_y
+            executor.submit(mouse_controller.move, -distance_x, -distance_y,
+                            (datetime.datetime.now() - start_time).total_seconds())
+            # mouse_speed = np.log(center_distance)
+            # white tracing line
+            cv2.line(frame, (int(cap_width // 2), int(cap_height // 2)), (int(center_x), int(center_y)),
+                     (255, 255, 255), thickness=1)
+            # Printing stats
+            if frame_count % 30 == 0:
+                frame_count = 0
+                # print(f'Mouse speed: {mouse_speed}')
 
         frames = update_fps(frames)
         draw_static_frame_data()
