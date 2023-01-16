@@ -7,10 +7,10 @@ class MouseController:
         self.speed = speed
         self.debug = debug
 
-    def move(self, x_offset, y_offset):
+    def move(self, x_offset, y_offset, duration):
         if self.debug:
             print(f'Move: X: {x_offset} Y: {y_offset}')
-        pyautogui.moveRel(xOffset=x_offset, yOffset=y_offset, duration=self.speed)
+        pyautogui.moveRel(xOffset=x_offset, yOffset=y_offset, duration=duration)
 
     def left_click(self):
         if self.debug:
