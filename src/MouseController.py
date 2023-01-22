@@ -17,6 +17,16 @@ class MouseController:
             print("Left click!")
         pyautogui.click(button=pyautogui.PRIMARY)
 
+    def left_release(self):
+        if self.debug:
+            print("Left click!")
+        pyautogui.mouseUp(button=pyautogui.PRIMARY)
+
+    def left_press(self):
+        if self.debug:
+            print("Left click!")
+        pyautogui.mouseDown(button=pyautogui.PRIMARY)
+
     def right_click(self):
         if self.debug:
             print("Right click!")

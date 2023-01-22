@@ -11,7 +11,7 @@ pip install opencv-python mediapipe tensorflow PyAutoGUI
 ## Usage
 
 ```bash
-python src/application.py
+python src/Application.py
 ```
 
 ## Contributing
